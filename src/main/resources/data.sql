@@ -46,8 +46,38 @@ values (1, 'ADMIN'),
        (3, 'REVIEWER');
 
 insert into user_to_roles(userId, roleId)
-values (1, 3),
-       (2, 3),
-       (3, 1),
-       (4, 2);
+values (1, 3), /* bruce     = REVIEWER */
+       (2, 3), /* peter     = REVIEWER */
+       (3, 1), /* tom       = ADMIN    */
+       (4, 2); /* toeLover  = MANAGER  */
 
+insert into permissions(id, name)
+values (1, 'ADD_COMMENT'),
+       (2, 'VIEW_MOVIES_LIST'),
+       (3, 'CREATE_MOVIE'),
+       (4, 'VIEW_PERSONS_LIST'),
+       (5, 'VIEW_PERSON'),
+       (6, 'UPDATE_PERSON'),
+       (7, 'VIEW_MY_PROFILE'),
+       (8, 'RATE_MOVIE');
+
+insert into role_to_permissions(roleId, permissionId)
+values (1, 1), /* ADMIN    = ADD_COMMENT       */
+       (1, 2), /* ADMIN    = VIEW_MOVIES_LIST  */
+       (1, 3), /* ADMIN    = CREATE_MOVIE      */
+       (1, 4), /* ADMIN    = VIEW_PERSONS_LIST */
+       (1, 5), /* ADMIN    = VIEW_PERSON       */
+       (1, 6), /* ADMIN    = UPDATE_PERSON     */
+       (1, 7), /* ADMIN    = VIEW_MY_PROFILE   */
+       (1, 8), /* ADMIN    = RATE_MOVIE        */
+       (2, 1), /* MANAGER  = ADD_COMMENT       */
+       (2, 2), /* MANAGER  = VIEW_MOVIES_LIST  */
+       (2, 3), /* MANAGER  = CREATE_MOVIE      */
+       (2, 4), /* MANAGER  = VIEW_PERSONS_LIST */
+       (2, 6), /* MANAGER  = UPDATE_PERSON     */
+       (2, 7), /* MANAGER  = VIEW_MY_PROFILE   */
+       (3, 1), /* REVIEWER = ADD_COMMENT       */
+       (3, 2), /* REVIEWER = VIEW_MOVIES_LIST  */
+       (3, 6), /* REVIEWER = UPDATE_PERSON     */
+       (3, 7), /* REVIEWER = VIEW_MY_PROFILE   */
+       (3, 8); /* REVIEWER = RATE_MOVIE        */
