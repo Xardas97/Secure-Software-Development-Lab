@@ -23,12 +23,12 @@ public class CommentRepository {
     }
 
     public void create(Comment comment) {
-        String query = "insert into comments(movieId, userId, comment) values (" + comment.getMovieId() + ", " + comment.getUserId() + ", '" + comment.getComment() + "')";
+        String query = "insert into comments(movieId, userId, comment) values (" + comment.getMovieId() + ", " + comment.getUserId() + ", ?)";
 
         try (Connection connection = dataSource.getConnection();
-             Statement statement = connection.createStatement();
-        ) {
-            statement.execute(query);
+             PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setString(1, comment.getComment());
+            statement.execute();
         } catch (SQLException e) {
             e.printStackTrace();
         }
