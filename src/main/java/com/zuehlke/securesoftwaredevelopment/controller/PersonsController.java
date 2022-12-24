@@ -1,10 +1,12 @@
 package com.zuehlke.securesoftwaredevelopment.controller;
 
+import com.zuehlke.securesoftwaredevelopment.ForbiddenException;
 import com.zuehlke.securesoftwaredevelopment.config.AuditLogger;
 import com.zuehlke.securesoftwaredevelopment.config.SecurityUtil;
 import com.zuehlke.securesoftwaredevelopment.domain.Person;
 import com.zuehlke.securesoftwaredevelopment.domain.User;
 import com.zuehlke.securesoftwaredevelopment.repository.PersonRepository;
+import com.zuehlke.securesoftwaredevelopment.repository.RoleRepository;
 import com.zuehlke.securesoftwaredevelopment.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,10 +32,12 @@ public class PersonsController {
 
     private final PersonRepository personRepository;
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
 
-    public PersonsController(PersonRepository personRepository, UserRepository userRepository) {
+    public PersonsController(PersonRepository personRepository, UserRepository userRepository, RoleRepository roleRepository) {
         this.personRepository = personRepository;
         this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
     }
 
     @GetMapping("/persons/{id}")
@@ -56,7 +60,11 @@ public class PersonsController {
     }
 
     @DeleteMapping("/persons/{id}")
+    @PreAuthorize("hasAuthority('UPDATE_PERSON')")
     public ResponseEntity<Void> person(@PathVariable int id) {
+        if (!canUpdatePerson(id))
+            throw new ForbiddenException();
+
         personRepository.delete(id);
         userRepository.delete(id);
 
@@ -64,10 +72,14 @@ public class PersonsController {
     }
 
     @PostMapping("/update-person")
-    public String updatePerson(Person person, HttpSession session, @RequestParam("csrfToken") String receivedToken) throws AccessDeniedException {
+    @PreAuthorize("hasAuthority('UPDATE_PERSON')")
+    public String updatePerson(Person person, HttpSession session, @RequestParam("csrfToken") String receivedToken) {
         String realToken = session.getAttribute("CSRF_TOKEN").toString();
         if (!realToken.equals(receivedToken))
-            throw new AccessDeniedException("Forbidden");
+            throw new ForbiddenException();
+
+        if (!canUpdatePerson(person.getId()))
+            throw new ForbiddenException();
 
         personRepository.update(person);
 
@@ -75,6 +87,23 @@ public class PersonsController {
             return "redirect:/myprofile";
 
         return "redirect:/persons/" + person.getId();
+    }
+
+    private boolean canUpdatePerson(int id) {
+        User currentUser = SecurityUtil.getCurrentUser();
+        boolean isAdmin = roleRepository.findByUserId(currentUser.getId()).stream().anyMatch(r -> r.getName().equals("ADMIN"));
+        boolean isThisUser = currentUser.getId() == id;
+        return isAdmin || isThisUser;
+    }
+
+    private boolean canUpdatePerson(String idString) {
+        try{
+            int id = Integer.parseInt(idString);
+            return canUpdatePerson(id);
+        }
+        catch (NumberFormatException ex) {
+            return false;
+        }
     }
 
     @GetMapping("/persons")
