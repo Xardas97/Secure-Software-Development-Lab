@@ -77,12 +77,14 @@ public class PersonsController {
     }
 
     @GetMapping("/persons")
+    @PreAuthorize("hasAuthority('VIEW_PERSONS_LIST')")
     public String persons(Model model) {
         model.addAttribute("persons", personRepository.getAll());
         return "persons";
     }
 
     @GetMapping(value = "/persons/search", produces = "application/json")
+    @PreAuthorize("hasAuthority('VIEW_PERSONS_LIST')")
     @ResponseBody
     public List<Person> searchPersons(@RequestParam String searchTerm) throws SQLException {
         return personRepository.search(searchTerm);
