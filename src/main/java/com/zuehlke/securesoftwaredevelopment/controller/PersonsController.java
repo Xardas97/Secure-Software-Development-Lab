@@ -1,6 +1,7 @@
 package com.zuehlke.securesoftwaredevelopment.controller;
 
 import com.zuehlke.securesoftwaredevelopment.config.AuditLogger;
+import com.zuehlke.securesoftwaredevelopment.config.SecurityUtil;
 import com.zuehlke.securesoftwaredevelopment.domain.Person;
 import com.zuehlke.securesoftwaredevelopment.domain.User;
 import com.zuehlke.securesoftwaredevelopment.repository.PersonRepository;
@@ -8,6 +9,7 @@ import com.zuehlke.securesoftwaredevelopment.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -17,6 +19,7 @@ import javax.servlet.http.HttpSession;
 import java.nio.file.AccessDeniedException;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Objects;
 
 @Controller
 
@@ -34,6 +37,7 @@ public class PersonsController {
     }
 
     @GetMapping("/persons/{id}")
+    @PreAuthorize("hasAuthority('VIEW_PERSON')")
     public String person(@PathVariable int id, Model model, HttpSession session) {
         model.addAttribute("CSRF_TOKEN", session.getAttribute("CSRF_TOKEN"));
 
@@ -65,6 +69,10 @@ public class PersonsController {
             throw new AccessDeniedException("Forbidden");
 
         personRepository.update(person);
+
+        if (Objects.equals(person.getId(), Integer.toString(SecurityUtil.getCurrentUser().getId())))
+            return "redirect:/myprofile";
+
         return "redirect:/persons/" + person.getId();
     }
 
