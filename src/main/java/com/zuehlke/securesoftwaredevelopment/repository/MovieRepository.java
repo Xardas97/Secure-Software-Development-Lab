@@ -4,6 +4,8 @@ import com.zuehlke.securesoftwaredevelopment.config.AuditLogger;
 import com.zuehlke.securesoftwaredevelopment.domain.Genre;
 import com.zuehlke.securesoftwaredevelopment.domain.Movie;
 import com.zuehlke.securesoftwaredevelopment.domain.NewMovie;
+import com.zuehlke.securesoftwaredevelopment.exception.InternalServerError;
+import com.zuehlke.securesoftwaredevelopment.exception.InvalidArgumentException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
@@ -12,6 +14,7 @@ import javax.sql.DataSource;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Repository
 public class MovieRepository {
@@ -27,6 +30,8 @@ public class MovieRepository {
     }
 
     public List<Movie> getAll() {
+        LOG.debug("Getting all movies");
+
         List<Movie> movieList = new ArrayList<>();
         String query = "SELECT id, title, description FROM movies";
         try (Connection connection = dataSource.getConnection();
@@ -37,12 +42,15 @@ public class MovieRepository {
                 movieList.add(movie);
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOG.error("Failed to get the movies" + e.getMessage());
+            throw new InternalServerError();
         }
         return movieList;
     }
 
-    public List<Movie> search(String searchTerm) throws SQLException {
+    public List<Movie> search(String searchTerm) {
+        LOG.debug("Searching for movies with: " + searchTerm);
+
         List<Movie> movieList = new ArrayList<>();
         String query = "SELECT DISTINCT m.id, m.title, m.description FROM movies m, movies_to_genres mg, genres g" +
                 " WHERE m.id = mg.movieId" +
@@ -56,10 +64,16 @@ public class MovieRepository {
                 movieList.add(createMovieFromResultSet(rs));
             }
         }
+        catch (SQLException e) {
+            LOG.error("Failed to search for movies: " + e.getMessage());
+            throw new InternalServerError();
+        }
         return movieList;
     }
 
     public Movie get(int movieId, List<Genre> genreList) {
+        LOG.debug("Getting the movie with id: " + movieId);
+
         String query = "SELECT id, title, description FROM movies WHERE id = " + movieId;
         try (Connection connection = dataSource.getConnection();
              Statement statement = connection.createStatement();
@@ -83,13 +97,16 @@ public class MovieRepository {
                 return movie;
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOG.warn("Failed to get the movie: " + e.getMessage());
         }
 
+        LOG.warn("Movie with id " + movieId + " not found");
         return null;
     }
 
     public long create(NewMovie movie, List<Genre> genresToInsert) {
+        LOG.info("Creating a movie: " + movie + " with genres: " + String.join(",", genresToInsert.stream().map(Genre::getName).collect(Collectors.toList())));
+
         String query = "INSERT INTO movies(title, description) VALUES(?, ?)";
         long id = 0;
         try (Connection connection = dataSource.getConnection();
@@ -98,6 +115,8 @@ public class MovieRepository {
             statement.setString(1, movie.getTitle());
             statement.setString(2, movie.getDescription());
             statement.executeUpdate();
+            LOG.debug("Successfully created a movie, adding genres");
+
             ResultSet generatedKeys = statement.getGeneratedKeys();
             if (generatedKeys.next()) {
                 id = generatedKeys.getLong(1);
@@ -110,17 +129,24 @@ public class MovieRepository {
                         statement2.setInt(2, genre.getId());
                         statement2.executeUpdate();
                     } catch (SQLException e) {
-                        e.printStackTrace();
+                        LOG.error("Failed to add genre to a movie: " + e.getMessage());
+                        throw new InternalServerError();
                     }
                 });
+
+                LOG.debug("Finished adding all genres to the new movie");
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOG.warn("Failed to create a new movie: " + e.getMessage());
+            throw new InvalidArgumentException();
         }
+
         return id;
     }
 
     public void delete(int movieId) {
+        LOG.info("Deleting movie " + movieId);
+
         String query = "DELETE FROM movies WHERE id = " + movieId;
         String query2 = "DELETE FROM ratings WHERE movieId = " + movieId;
         String query3 = "DELETE FROM comments WHERE movieId = " + movieId;
@@ -132,8 +158,11 @@ public class MovieRepository {
             statement.executeUpdate(query2);
             statement.executeUpdate(query3);
             statement.executeUpdate(query4);
+
+            LOG.debug("Successfully deleted the movie " + movieId);
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOG.warn("Failed to delete the movie: " + e.getMessage());
+            throw new InvalidArgumentException();
         }
     }
 

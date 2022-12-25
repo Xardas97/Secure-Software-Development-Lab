@@ -12,6 +12,16 @@ public class Person {
         this.email = email;
     }
 
+    @Override
+    public String toString() {
+        return "Person{" +
+                "id='" + id + '\'' +
+                ", firstName='" + firstName + '\'' +
+                ", lastName='" + lastName + '\'' +
+                ", email='" + email + '\'' +
+                '}';
+    }
+
     public String getId() {
         return id;
     }

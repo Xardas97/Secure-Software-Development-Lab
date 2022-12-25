@@ -1,6 +1,7 @@
 package com.zuehlke.securesoftwaredevelopment.repository;
 
 import com.zuehlke.securesoftwaredevelopment.domain.Genre;
+import com.zuehlke.securesoftwaredevelopment.exception.InternalServerError;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
@@ -23,6 +24,8 @@ public class GenreRepository {
     }
 
     public List<Genre> getAll() {
+        LOG.debug("Getting all genres");
+
         List<Genre> genreList = new ArrayList<>();
         String query = "SELECT id, name FROM genres";
         try (Connection connection = dataSource.getConnection();
@@ -32,8 +35,10 @@ public class GenreRepository {
                 genreList.add(new Genre(rs.getInt(1), rs.getString(2)));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOG.error("Failed to get genres: " + e.getMessage());
+            throw new InternalServerError();
         }
+
         return genreList;
     }
 }

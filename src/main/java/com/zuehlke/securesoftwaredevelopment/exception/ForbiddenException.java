@@ -1,4 +1,4 @@
-package com.zuehlke.securesoftwaredevelopment;
+package com.zuehlke.securesoftwaredevelopment.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;

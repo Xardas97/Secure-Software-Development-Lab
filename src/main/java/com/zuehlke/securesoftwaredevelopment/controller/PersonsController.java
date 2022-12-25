@@ -1,10 +1,13 @@
 package com.zuehlke.securesoftwaredevelopment.controller;
 
-import com.zuehlke.securesoftwaredevelopment.ForbiddenException;
+import com.zuehlke.securesoftwaredevelopment.exception.ForbiddenException;
 import com.zuehlke.securesoftwaredevelopment.config.AuditLogger;
 import com.zuehlke.securesoftwaredevelopment.config.SecurityUtil;
 import com.zuehlke.securesoftwaredevelopment.domain.Person;
 import com.zuehlke.securesoftwaredevelopment.domain.User;
+import com.zuehlke.securesoftwaredevelopment.exception.InternalServerError;
+import com.zuehlke.securesoftwaredevelopment.exception.InvalidArgumentException;
+import com.zuehlke.securesoftwaredevelopment.exception.NotFoundException;
 import com.zuehlke.securesoftwaredevelopment.repository.PersonRepository;
 import com.zuehlke.securesoftwaredevelopment.repository.RoleRepository;
 import com.zuehlke.securesoftwaredevelopment.repository.UserRepository;
@@ -18,7 +21,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
-import java.nio.file.AccessDeniedException;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;
@@ -45,7 +47,10 @@ public class PersonsController {
     public String person(@PathVariable int id, Model model, HttpSession session) {
         model.addAttribute("CSRF_TOKEN", session.getAttribute("CSRF_TOKEN"));
 
-        model.addAttribute("person", personRepository.get("" + id));
+        Person person = personRepository.get("" + id);
+        if (person == null) throw new NotFoundException();
+
+        model.addAttribute("person", person);
         return "person";
     }
 
@@ -55,7 +60,11 @@ public class PersonsController {
         model.addAttribute("CSRF_TOKEN", session.getAttribute("CSRF_TOKEN"));
 
         User user = (User) authentication.getPrincipal();
-        model.addAttribute("person", personRepository.get("" + user.getId()));
+
+        Person person = personRepository.get("" + user.getId());
+        if (person == null) throw new InternalServerError();
+
+        model.addAttribute("person", person);
         return "person";
     }
 

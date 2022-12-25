@@ -7,7 +7,16 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
+import org.springframework.security.web.authentication.logout.SimpleUrlLogoutSuccessHandler;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true)
@@ -16,9 +25,24 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     private final DatabaseAuthenticationProvider databaseAuthenticationProvider;
     private final UserDetailsServiceImpl userDetailsService;
 
+    private static final AuditLogger auditLogger = AuditLogger.getAuditLogger(SecurityConfig.class);
+
     public SecurityConfig(DatabaseAuthenticationProvider databaseAuthenticationProvider, UserDetailsServiceImpl userDetailsService) {
         this.databaseAuthenticationProvider = databaseAuthenticationProvider;
         this.userDetailsService = userDetailsService;
+    }
+
+    @Bean
+    public LogoutSuccessHandler logoutSuccessHandler() {
+        return new SimpleUrlLogoutSuccessHandler() {
+            @Override
+            public void onLogoutSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+                if (authentication != null)
+                    auditLogger.audit("Username '" + authentication.getName() + "' logged out");
+
+                super.onLogoutSuccess(request, response, authentication);
+            }
+        };
     }
 
     @Override
@@ -35,8 +59,15 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .loginProcessingUrl("/perform-login")
                 .defaultSuccessUrl("/")
                 .failureUrl("/login?error")
+                .successHandler((request, response, authentication) -> {
+                    if (authentication != null)
+                        auditLogger.audit("Login successful for username '" + authentication.getName() + "'");
+
+                    response.sendRedirect("/");
+                })
                 .and()
                 .logout()
+                .logoutSuccessHandler(logoutSuccessHandler())
                 .logoutSuccessUrl("/login")
                 .invalidateHttpSession(true)
                 .deleteCookies("JSESSIONID");

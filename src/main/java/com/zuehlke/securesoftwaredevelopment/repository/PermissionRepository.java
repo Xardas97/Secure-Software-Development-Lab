@@ -1,6 +1,7 @@
 package com.zuehlke.securesoftwaredevelopment.repository;
 
 import com.zuehlke.securesoftwaredevelopment.domain.Permission;
+import com.zuehlke.securesoftwaredevelopment.exception.InternalServerError;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
@@ -25,6 +26,8 @@ public class PermissionRepository {
     }
 
     public List<Permission> findByRoleId(int roleId) {
+        LOG.debug("Getting permissions for role: " + roleId);
+
         List<Permission> permissions = new ArrayList<>();
         String query = "SELECT id, name FROM permissions WHERE id IN (SELECT permissionId FROM role_to_permissions WHERE roleId=" + roleId + ")";
         try (Connection connection = dataSource.getConnection();
@@ -36,8 +39,10 @@ public class PermissionRepository {
                 permissions.add(new Permission(id, name));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOG.error("Failed to get permissions for role: " + e.getMessage());
+            throw new InternalServerError();
         }
+
         return permissions;
     }
 }

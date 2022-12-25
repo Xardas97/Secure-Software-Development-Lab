@@ -3,6 +3,8 @@ package com.zuehlke.securesoftwaredevelopment.controller;
 import com.zuehlke.securesoftwaredevelopment.config.AuditLogger;
 import com.zuehlke.securesoftwaredevelopment.config.SecurityUtil;
 import com.zuehlke.securesoftwaredevelopment.domain.*;
+import com.zuehlke.securesoftwaredevelopment.exception.InvalidArgumentException;
+import com.zuehlke.securesoftwaredevelopment.exception.NotFoundException;
 import com.zuehlke.securesoftwaredevelopment.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +52,7 @@ public class MoviesController {
     @GetMapping(value = "/api/movies/search", produces = "application/json")
     @PreAuthorize("hasAuthority('VIEW_MOVIES_LIST')")
     @ResponseBody
-    public List<Movie> search(@RequestParam("query") String query) throws SQLException {
+    public List<Movie> search(@RequestParam("query") String query) {
         return movieRepository.search(query);
     }
 
@@ -65,26 +67,31 @@ public class MoviesController {
         User user = (User) authentication.getPrincipal();
         List<Genre> genreList = this.genreRepository.getAll();
 
-        model.addAttribute("movie", movieRepository.get(Integer.parseInt(id), genreList));
+        Movie movie = movieRepository.get(Integer.parseInt(id), genreList);
+        if (movie == null) throw new NotFoundException();
+
+        model.addAttribute("movie", movie);
         List<Comment> comments = commentRepository.getAll(id);
         List<Rating> ratings = ratingRepository.getAll(id);
         Optional<Rating> userRating = ratings.stream().filter(rating -> rating.getUserId() == user.getId()).findFirst();
         if (userRating.isPresent()) {
+            LOG.debug("Adding user rating");
             model.addAttribute("userRating", userRating.get().getRating());
         }
         if (ratings.size() > 0) {
+            LOG.debug("Calculating and adding average rating");
             Integer sumRating = ratings.stream().map(rating -> rating.getRating()).reduce(0, (total, rating) -> total + rating);
             Double avgRating = (double)sumRating/ratings.size();
+            LOG.debug("Average rating: " + avgRating);
             model.addAttribute("averageRating", avgRating);
         }
 
+        LOG.debug("Adding comments");
         List<ViewComment> commentList = new ArrayList<>();
-
         for (Comment comment : comments) {
             Person person = userRepository.get("" + comment.getUserId());
             commentList.add(new ViewComment(person.getFirstName() + " " + person.getLastName(), comment.getComment()));
         }
-
         model.addAttribute("comments", commentList);
 
         return "movie";
@@ -92,7 +99,10 @@ public class MoviesController {
 
     @PostMapping("/movies")
     @PreAuthorize("hasAuthority('CREATE_MOVIE')")
-    public String createMovie(NewMovie newMovie) throws SQLException {
+    public String createMovie(NewMovie newMovie) {
+        if (newMovie.getGenres() == null)
+            throw new InvalidArgumentException();
+
         List<Genre> genreList = this.genreRepository.getAll();
         List<Genre> genresToInsert = newMovie.getGenres().stream().map(genreId -> genreList.stream().filter(genre -> genre.getId() == genreId).findFirst().get()).collect(Collectors.toList());
         Long id = movieRepository.create(newMovie, genresToInsert);

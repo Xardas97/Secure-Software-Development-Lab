@@ -11,7 +11,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 public class AuditLogger {
     public static final Marker AUDIT = MarkerFactory.getMarker("AUDIT");
     private final Logger LOG;
-    private Integer id;
 
     public static AuditLogger getAuditLogger(Class<?> clazz) {
         Logger logger = LoggerFactory.getLogger(clazz);
@@ -27,20 +26,21 @@ public class AuditLogger {
         LOG.info(AUDIT, "userId={} - {}", id, description);
     }
 
-    public void auditChange(Entity entity) {
+    public void audit(Entity entity) {
         audit("Change " + entity.toString());
     }
 
     private Integer getId() {
-        if (id == null) {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication != null) {
-                User user = (User) authentication.getPrincipal();
-                if (user != null) {
-                    id = user.getId();
-                }
-            }
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return null;
         }
-        return id;
+
+        User user = (User) authentication.getPrincipal();
+        if (user == null) {
+            return null;
+        }
+
+        return user.getId();
     }
 }

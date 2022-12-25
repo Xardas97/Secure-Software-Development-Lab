@@ -1,6 +1,7 @@
 package com.zuehlke.securesoftwaredevelopment.repository;
 
 import com.zuehlke.securesoftwaredevelopment.domain.Role;
+import com.zuehlke.securesoftwaredevelopment.exception.InternalServerError;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
@@ -25,6 +26,8 @@ public class RoleRepository {
     }
 
     public List<Role> findByUserId(int userId) {
+        LOG.debug("Getting roles for user " + userId);
+
         List<Role> roles = new ArrayList<>();
         String query = "SELECT id, name FROM roles WHERE id IN (SELECT roleId FROM user_to_roles WHERE userId=" + userId + ")";
         try (Connection connection = dataSource.getConnection();
@@ -36,8 +39,10 @@ public class RoleRepository {
                 roles.add(new Role(id, name));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOG.error("Failed to get roles for user: " + e.getMessage());
+            throw new InternalServerError();
         }
+
         return roles;
     }
 }

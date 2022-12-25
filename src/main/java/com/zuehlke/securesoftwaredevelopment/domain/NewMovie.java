@@ -16,6 +16,15 @@ public class NewMovie {
         this.genres = genres;
     }
 
+    @Override
+    public String toString() {
+        return "NewMovie{" +
+                "title='" + title + '\'' +
+                ", description='" + description + '\'' +
+                ", genres=" + genres +
+                '}';
+    }
+
     public String getTitle() {
         return title;
     }
