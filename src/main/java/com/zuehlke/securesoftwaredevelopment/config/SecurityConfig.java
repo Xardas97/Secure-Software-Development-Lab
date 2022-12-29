@@ -33,7 +33,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .authenticationDetailsSource(request -> request.getParameter("totp"))
                 .loginPage("/login")
                 .loginProcessingUrl("/perform-login")
-                .defaultSuccessUrl("/movies")
+                .defaultSuccessUrl("/")
                 .failureUrl("/login?error")
                 .and()
                 .logout()

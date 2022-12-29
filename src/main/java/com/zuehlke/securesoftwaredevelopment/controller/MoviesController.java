@@ -1,6 +1,7 @@
 package com.zuehlke.securesoftwaredevelopment.controller;
 
 import com.zuehlke.securesoftwaredevelopment.config.AuditLogger;
+import com.zuehlke.securesoftwaredevelopment.config.SecurityUtil;
 import com.zuehlke.securesoftwaredevelopment.domain.*;
 import com.zuehlke.securesoftwaredevelopment.repository.*;
 import org.slf4j.Logger;
@@ -39,12 +40,6 @@ public class MoviesController {
         this.genreRepository = genreRepository;
     }
 
-    @GetMapping("/")
-    public String showSearch(Model model) {
-        model.addAttribute("movies", movieRepository.getAll());
-        return "movies";
-    }
-
     @GetMapping("/create-form")
     @PreAuthorize("hasAuthority('CREATE_MOVIE')")
     public String CreateForm(Model model) {
@@ -53,12 +48,14 @@ public class MoviesController {
     }
 
     @GetMapping(value = "/api/movies/search", produces = "application/json")
+    @PreAuthorize("hasAuthority('VIEW_MOVIES_LIST')")
     @ResponseBody
     public List<Movie> search(@RequestParam("query") String query) throws SQLException {
         return movieRepository.search(query);
     }
 
     @GetMapping("/movies")
+    @PreAuthorize("hasAuthority('VIEW_MOVIES_LIST')")
     public String showMovie(@RequestParam(name = "id", required = false) String id, Model model, Authentication authentication) {
         if (id == null) {
             model.addAttribute("movies", movieRepository.getAll());

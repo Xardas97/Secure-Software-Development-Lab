@@ -3,8 +3,9 @@ package com.zuehlke.securesoftwaredevelopment.controller;
 import com.warrenstrange.googleauth.GoogleAuthenticator;
 import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
 import com.warrenstrange.googleauth.GoogleAuthenticatorQRGenerator;
+import com.zuehlke.securesoftwaredevelopment.config.SecurityUtil;
 import com.zuehlke.securesoftwaredevelopment.domain.HashedUser;
-import com.zuehlke.securesoftwaredevelopment.repository.HashedUserRepository;
+import com.zuehlke.securesoftwaredevelopment.repository.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
@@ -16,15 +17,36 @@ import org.springframework.web.bind.annotation.RequestParam;
 @Controller
 public class LoginController {
 
-    private final HashedUserRepository repository;
+    private final HashedUserRepository userRepository;
+    private MovieRepository movieRepository;
+    private PersonRepository personRepository;
 
-    LoginController(HashedUserRepository repository) {
-        this.repository = repository;
+    LoginController(HashedUserRepository userRepository, MovieRepository movieRepository, PersonRepository personRepository) {
+        this.userRepository = userRepository;
+        this.movieRepository = movieRepository;
+        this.personRepository = personRepository;
     }
 
     @GetMapping("/login")
     public String showLoginForm() {
         return "login";
+    }
+
+    @GetMapping("/")
+    public String showStartPage(Model model) {
+        if (SecurityUtil.hasPermission("VIEW_MOVIES_LIST")) {
+            return "redirect:/movies";
+        }
+
+        if (SecurityUtil.hasPermission("VIEW_PERSONS_LIST")) {
+            return "redirect:/persons";
+        }
+
+        if (SecurityUtil.hasPermission("VIEW_MY_PROFILE")) {
+            return "redirect:/myprofile";
+        }
+
+        return "redirect:/logout";
     }
 
     @GetMapping("/register-totp")
@@ -45,7 +67,7 @@ public class LoginController {
     @PostMapping("/register-totp")
     public String registerTotp(@RequestParam() String totpKey, Model model, Authentication authentication) {
         final HashedUser user = (HashedUser) authentication.getPrincipal();
-        repository.saveTotpKey(user.getUsername(), totpKey);
+        userRepository.saveTotpKey(user.getUsername(), totpKey);
         model.addAttribute("registered", true);
         return "register-totp";
     }
